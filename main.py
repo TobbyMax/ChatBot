@@ -1072,8 +1072,80 @@ def get_answer(text):
     return get_default_response()
 
 
-while True:
-    question = input()
-    answer = get_answer(question)
-    print(answer)
+# while True:
+#     question = input()
+#     answer = get_answer(question)
+#     print(answer)
+
+dataset = []  # [[x,y], [example,intnet], ...]
+
+for intent, intent_data in BOT_CONFIG['intents'].items():
+    for example in intent_data['examples']:
+        dataset.append([example, intent])
+
+dataset
+
+X_text = [x for x, y in dataset]
+y = [y for x, y in dataset]
+
+## Векторизация
+
+# scikit-learn
+
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+vectorizer = CountVectorizer()
+X = vectorizer.fit_transform(X_text)
+
+# print(vectorizer.get_feature_names())
+# print(X.toarray()[0])
+
+# vectorizer.transform(['привет как дела?']).toarray()
+
+## Классификация
+
+from sklearn.linear_model import LogisticRegression
+
+clf = LogisticRegression()
+clf.fit(X, y)
+
+clf.predict(vectorizer.transform(['привет как дела?', 'ку']))
+
+# clf.classes_
+# clf.predict_proba(vectorizer.transform(['привет']))
+
+## Тестирование
+
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
+
+clf = LogisticRegression()
+clf.fit(X_train, y_train)
+
+clf.score(X_test, y_test)
+
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.svm import LinearSVC
+
+vectorizer = CountVectorizer()
+X = vectorizer.fit_transform(X_text)
+
+n = 100
+scores = []
+
+for i in range(n):
+    clf = LinearSVC()
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
+    clf.fit(X_train, y_train)
+    score = clf.score(X_test, y_test)
+    scores.append(score)
+
+print(sum(scores) / n)
+
 
