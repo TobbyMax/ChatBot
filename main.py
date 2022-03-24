@@ -1077,75 +1077,123 @@ def get_answer(text):
 #     answer = get_answer(question)
 #     print(answer)
 
-dataset = []  # [[x,y], [example,intnet], ...]
+# dataset = []  # [[x,y], [example,intnet], ...]
+#
+# for intent, intent_data in BOT_CONFIG['intents'].items():
+#     for example in intent_data['examples']:
+#         dataset.append([example, intent])
+#
+# dataset
+#
+# X_text = [x for x, y in dataset]
+# y = [y for x, y in dataset]
+#
+# ## Векторизация
+#
+# # scikit-learn
+#
+# from sklearn.feature_extraction.text import CountVectorizer
+# from sklearn.feature_extraction.text import TfidfVectorizer
+#
+# vectorizer = CountVectorizer()
+# X = vectorizer.fit_transform(X_text)
+#
+# # print(vectorizer.get_feature_names())
+# # print(X.toarray()[0])
+#
+# # vectorizer.transform(['привет как дела?']).toarray()
+#
+# ## Классификация
+#
+# from sklearn.linear_model import LogisticRegression
+#
+# clf = LogisticRegression()
+# clf.fit(X, y)
+#
+# clf.predict(vectorizer.transform(['привет как дела?', 'ку']))
+#
+# # clf.classes_
+# # clf.predict_proba(vectorizer.transform(['привет']))
+#
+# ## Тестирование
+#
+# from sklearn.model_selection import train_test_split
+#
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
+#
+# clf = LogisticRegression()
+# clf.fit(X_train, y_train)
+#
+# clf.score(X_test, y_test)
+#
+# from sklearn.feature_extraction.text import CountVectorizer
+# from sklearn.feature_extraction.text import TfidfVectorizer
+# from sklearn.linear_model import LogisticRegression
+# from sklearn.model_selection import train_test_split
+# from sklearn.svm import LinearSVC
+#
+# vectorizer = CountVectorizer()
+# X = vectorizer.fit_transform(X_text)
+#
+# n = 100
+# scores = []
+#
+# for i in range(n):
+#     clf = LinearSVC()
+#
+#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
+#     clf.fit(X_train, y_train)
+#     score = clf.score(X_test, y_test)
+#     scores.append(score)
+#
+# print(sum(scores) / n)
 
-for intent, intent_data in BOT_CONFIG['intents'].items():
-    for example in intent_data['examples']:
-        dataset.append([example, intent])
+with open('dialogues.txt', encoding='utf-8') as f:
+    content = f.read()
 
-dataset
+len(content.split('\n\n'))
 
-X_text = [x for x, y in dataset]
-y = [y for x, y in dataset]
+dialogues = []  # [[Q, A], ...]
 
-## Векторизация
+for dialogue_text in content.split('\n\n'):
+    replicas = dialogue_text.split('\n')
+    if len(replicas) >= 2:
+        replicas = replicas[:2]
+        replicas = [replica[2:] for replica in replicas]
+        replicas[0] = replicas[0].lower().strip()
+        if replicas[0]:
+            dialogues.append(tuple(replicas))
 
-# scikit-learn
+dialogues = list(set(dialogues))
 
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
+print(len(dialogues))
+print(dialogues[:10])
 
-vectorizer = CountVectorizer()
-X = vectorizer.fit_transform(X_text)
+import nltk
 
-# print(vectorizer.get_feature_names())
-# print(X.toarray()[0])
+qa_dataset = {}
 
-# vectorizer.transform(['привет как дела?']).toarray()
-
-## Классификация
-
-from sklearn.linear_model import LogisticRegression
-
-clf = LogisticRegression()
-clf.fit(X, y)
-
-clf.predict(vectorizer.transform(['привет как дела?', 'ку']))
-
-# clf.classes_
-# clf.predict_proba(vectorizer.transform(['привет']))
-
-## Тестирование
-
-from sklearn.model_selection import train_test_split
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
-
-clf = LogisticRegression()
-clf.fit(X_train, y_train)
-
-clf.score(X_test, y_test)
-
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-from sklearn.svm import LinearSVC
-
-vectorizer = CountVectorizer()
-X = vectorizer.fit_transform(X_text)
-
-n = 100
-scores = []
-
-for i in range(n):
-    clf = LinearSVC()
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
-    clf.fit(X_train, y_train)
-    score = clf.score(X_test, y_test)
-    scores.append(score)
-
-print(sum(scores) / n)
+alphabet = 'ёйцукенгшщзхъфывапролджэячсмитьбю'
+for question, answer in dialogues:
+    tokens = nltk.word_tokenize(question)
+    words = [token for token in tokens if any(char in token for char in alphabet)]
+    for word in words:
+        if word not in qa_dataset:
+            qa_dataset[word] = []
+        qa_dataset[word].append((question, answer))
 
 
+def get_generative_answer(text):
+    text = text.lower()
+    tokens = nltk.word_tokenize(text)
+    words = [token for token in tokens if any(char in token for char in alphabet)]
+    for word in words:
+        if word in qa_dataset:
+            for question, answer in qa_dataset[word]:
+                if abs(len(text) - len(question)) / len(question) < 0.2:
+                    distance = nltk.edit_distance(text, question)
+                    if distance / len(question) < 0.2:
+                        return answer
+
+
+get_generative_answer('о чем думаешь?')
